@@ -25,6 +25,10 @@ var listCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		if cfg.Repo == "" {
 			return fmt.Errorf("--repo is required")
 		}

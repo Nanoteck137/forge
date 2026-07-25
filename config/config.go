@@ -12,9 +12,9 @@ import (
 )
 
 type Config struct {
-	Server      string `mapstructure:"server"`
-	Token       string `mapstructure:"token"`
-	GitHubToken string `mapstructure:"github_token"`
+	Server      string `mapstructure:"server" toml:"server"`
+	Token       string `mapstructure:"token" toml:"token"`
+	GitHubToken string `mapstructure:"github_token" toml:"github_token"`
 }
 
 func configDefaults() map[string]any {

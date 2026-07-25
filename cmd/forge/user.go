@@ -18,6 +18,10 @@ var userInfoCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		user, err := service.GetCurrentUser(service.GetCurrentUserInput{
 			Server: cfg.Server,
 			Token:  cfg.Token,
@@ -52,6 +56,10 @@ var userViewCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
+
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
 
 		user, err := service.GetUser(service.GetUserInput{
 			Server:   cfg.Server,

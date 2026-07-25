@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -21,6 +22,10 @@ var repoListCmd = &cobra.Command{
 	Short: "List repositories",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
+
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
 
 		username, _ := cmd.Flags().GetString("user")
 		org, _ := cmd.Flags().GetString("org")
@@ -68,6 +73,10 @@ var repoViewCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
+
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
 
 		var owner, repo string
 
@@ -127,6 +136,10 @@ var repoCreateCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		name := args[0]
 		desc, _ := cmd.Flags().GetString("description")
 		private, _ := cmd.Flags().GetBool("private")
@@ -134,6 +147,7 @@ var repoCreateCmd = &cobra.Command{
 		license, _ := cmd.Flags().GetString("license")
 		gitignore, _ := cmd.Flags().GetString("gitignore")
 		org, _ := cmd.Flags().GetString("org")
+		mirror, _ := cmd.Flags().GetBool("mirror")
 
 		repo, err := service.CreateRepo(service.CreateRepoInput{
 			Server:      cfg.Server,
@@ -156,6 +170,40 @@ var repoCreateCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Created %s (%s)\n", repo.FullName, repo.HTMLURL)
+
+		if mirror {
+			if cfg.GitHubToken == "" {
+				return fmt.Errorf("GitHub token not set, run 'forge init' to set up your config")
+			}
+
+			scanner := bufio.NewScanner(os.Stdin)
+
+			githubRepoName := prompt(scanner, "GitHub repository name", repo.Name)
+
+			fmt.Print("GitHub organization (leave blank for personal): ")
+			scanner.Scan()
+			githubOrg := strings.TrimSpace(scanner.Text())
+
+			fmt.Println("Setting up mirror...")
+
+			mirrorResult, err := service.SetupMirror(service.SetupMirrorParams{
+				Server:      cfg.Server,
+				Token:       cfg.Token,
+				Owner:       strings.SplitN(repo.FullName, "/", 2)[0],
+				Repo:        repo.Name,
+				GitHubToken: cfg.GitHubToken,
+				GitHubRepo:  githubRepoName,
+				GitHubOrg:   githubOrg,
+			})
+			if err != nil {
+				return fmt.Errorf("setting up mirror: %w", err)
+			}
+
+			fmt.Println("Mirror setup complete!")
+			fmt.Printf("  Forgejo: %s\n", mirrorResult.ForgejoRepo)
+			fmt.Printf("  GitHub:  %s\n", mirrorResult.GitHubURL)
+		}
+
 		return nil
 	},
 }
@@ -166,6 +214,10 @@ var repoCloneCmd = &cobra.Command{
 	Args:  cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
+
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
 
 		parts := strings.SplitN(args[0], "/", 2)
 		if len(parts) != 2 {
@@ -216,6 +268,10 @@ var repoForkCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		parts := strings.SplitN(args[0], "/", 2)
 		if len(parts) != 2 {
 			return fmt.Errorf("invalid repository format, expected owner/repo")
@@ -258,6 +314,7 @@ func init() {
 	repoCreateCmd.Flags().String("license", "", "License template")
 	repoCreateCmd.Flags().String("gitignore", "", "Gitignore template")
 	repoCreateCmd.Flags().String("org", "", "Create in organization")
+	repoCreateCmd.Flags().Bool("mirror", false, "Set up GitHub push mirror after creation")
 
 	repoForkCmd.Flags().String("org", "", "Fork to organization")
 

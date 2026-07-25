@@ -18,6 +18,10 @@ var viewCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		number, err := strconv.Atoi(args[0])
 		if err != nil {
 			return fmt.Errorf("invalid issue number: %s", args[0])

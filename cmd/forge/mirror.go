@@ -21,6 +21,10 @@ var mirrorSetupCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		scanner := bufio.NewScanner(os.Stdin)
 
 		owner := cfg.Owner
@@ -81,6 +85,10 @@ var mirrorSyncCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
 
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
+
 		parts := strings.SplitN(args[0], "/", 2)
 		if len(parts) != 2 {
 			return fmt.Errorf("invalid format, expected owner/repo")
@@ -109,6 +117,10 @@ var mirrorListCmd = &cobra.Command{
 	Short: "List push mirrors for a repository",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
+
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
 
 		owner := cfg.Owner
 		repo := cfg.Repo
@@ -158,6 +170,10 @@ var mirrorRemoveCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg := resolveConfig(cmd)
+
+		if err := service.ValidateTokens(cfg.Server, cfg.Token, cfg.GitHubToken); err != nil {
+			return err
+		}
 
 		parts := strings.SplitN(args[0], "/", 2)
 		if len(parts) != 2 {

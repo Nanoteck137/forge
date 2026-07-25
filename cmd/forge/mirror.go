@@ -210,6 +210,8 @@ var mirrorRemoveCmd = &cobra.Command{
 }
 
 func init() {
+	mirrorSetupCmd.Flags().StringVarP(&repoFlag, "repo", "r", gitInfo.Repo, "Repository name")
+
 	mirrorListCmd.Flags().Int("limit", 50, "Max results")
 	mirrorListCmd.Flags().Int("page", 1, "Page number")
 

@@ -53,7 +53,7 @@ func SetupMirror(params SetupMirrorParams) (*SetupMirrorResult, error) {
 	if err != nil {
 		createReq := github.CreateGitHubRepoRequest{
 			Name:    params.GitHubRepo,
-			Private: true,
+			Private: false,
 		}
 
 		githubRepo, err = githubClient.CreateRepo(createReq)

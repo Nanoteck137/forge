@@ -13,13 +13,11 @@ import (
 
 type Config struct {
 	Server string `mapstructure:"server"`
-	Token  string `mapstructure:"token"`
 }
 
 func configDefaults() map[string]any {
 	return map[string]any{
 		"server": "https://forgejo.nanoteck137.net",
-		"token":  "",
 	}
 }
 
@@ -145,4 +143,38 @@ func Load(cfgFile string) (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func ConfigPath(cfgFile string) (string, error) {
+	if cfgFile != "" {
+		return cfgFile, nil
+	}
+
+	if userDir, err := os.UserConfigDir(); err == nil {
+		return filepath.Join(userDir, forge.AppName, "config.toml"), nil
+	}
+
+	return "config.toml", nil
+}
+
+func Save(cfgFile string, config *Config) error {
+	path, err := ConfigPath(cfgFile)
+	if err != nil {
+		return fmt.Errorf("getting config path: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return fmt.Errorf("creating config directory: %w", err)
+	}
+
+	data, err := toml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("marshaling config: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		return fmt.Errorf("writing config: %w", err)
+	}
+
+	return nil
 }

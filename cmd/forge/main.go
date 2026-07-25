@@ -6,6 +6,7 @@ import (
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/forge"
 	"github.com/nanoteck137/forge/config"
+	"github.com/nanoteck137/forge/credentials"
 	"github.com/spf13/cobra"
 )
 
@@ -86,8 +87,10 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 	}
 
 	token := tokenFlag
-	if !cmd.Flags().Changed("token") && cfg.Token != "" {
-		token = cfg.Token
+	if !cmd.Flags().Changed("token") {
+		if storedToken, _ := credentials.Read("forgejo_token"); storedToken != "" {
+			token = storedToken
+		}
 	}
 
 	repo := ""

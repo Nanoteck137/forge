@@ -44,18 +44,13 @@ var initCmd = &cobra.Command{
 		scanner := bufio.NewScanner(os.Stdin)
 
 		server := prompt(scanner, "Server", "https://forgejo.nanoteck137.net")
-		fmt.Print("Token: ")
-		scanner.Scan()
-		token := strings.TrimSpace(scanner.Text())
 
 		type configFile struct {
 			Server string `toml:"server"`
-			Token  string `toml:"token"`
 		}
 
 		cfg := configFile{
 			Server: server,
-			Token:  token,
 		}
 
 		data, err := toml.Marshal(cfg)
@@ -68,6 +63,7 @@ var initCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Config written to %s\n", configPath)
+		fmt.Println("Run 'forge auth login' to authenticate.")
 		return nil
 	},
 }

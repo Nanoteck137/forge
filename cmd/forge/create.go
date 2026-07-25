@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/nanoteck137/forge"
+	"github.com/nanoteck137/forge/forgejo"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +43,7 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("--title is required (or provide a title via --editor)")
 		}
 
-		client := forge.NewClient(cfg.Server, cfg.Token)
+		client := forgejo.NewClient(cfg.Server, cfg.Token)
 
 		labelIDs, err := client.ResolveLabels(cfg.Owner, cfg.Repo, labelFlags)
 		if err != nil {
@@ -60,7 +60,7 @@ var createCmd = &cobra.Command{
 		}
 		body += "_Created by forge_"
 
-		req := forge.CreateIssueRequest{
+		req := forgejo.CreateIssueRequest{
 			Title:     title,
 			Body:      body,
 			Assignees: assigneeFlags,

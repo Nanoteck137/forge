@@ -1,4 +1,4 @@
-package forge
+package forgejo
 
 import (
 	"bytes"
@@ -610,10 +610,10 @@ func (c *Client) GetPushMirror(owner, repo, name string) (*PushMirror, error) {
 // User SSH Key methods
 
 type PublicKey struct {
-	ID       int    `json:"id"`
-	Key      string `json:"key"`
-	Title    string `json:"title"`
-	Created  string `json:"created_at"`
+	ID      int    `json:"id"`
+	Key     string `json:"key"`
+	Title   string `json:"title"`
+	Created string `json:"created_at"`
 }
 
 func (c *Client) ListUserKeys(page, limit int) ([]PublicKey, error) {
@@ -643,8 +643,8 @@ func (c *Client) ListUserKeys(page, limit int) ([]PublicKey, error) {
 }
 
 type CreateKeyRequest struct {
-	Title    string `json:"title"`
-	Key      string `json:"key"`
+	Title string `json:"title"`
+	Key   string `json:"key"`
 }
 
 func (c *Client) AddUserKey(req CreateKeyRequest) (*PublicKey, error) {

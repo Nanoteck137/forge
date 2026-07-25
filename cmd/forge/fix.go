@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/nanoteck137/forge"
+	"github.com/nanoteck137/forge/forgejo"
 	"github.com/spf13/cobra"
 )
 
@@ -18,12 +18,12 @@ var fixCmd = &cobra.Command{
 			return fmt.Errorf("--repo is required")
 		}
 
-		client := forge.NewClient(cfg.Server, cfg.Token)
+		client := forgejo.NewClient(cfg.Server, cfg.Token)
 
 		var fixed int
 		page := 1
 		for {
-			opts := forge.ListIssuesOptions{
+			opts := forgejo.ListIssuesOptions{
 				State: "all",
 				Limit: 100,
 				Page:  page,
@@ -45,7 +45,7 @@ var fixCmd = &cobra.Command{
 
 			newBody := strings.ReplaceAll(issue.Body, "\\n", "\n")
 
-			req := forge.EditIssueRequest{Body: newBody}
+			req := forgejo.EditIssueRequest{Body: newBody}
 			_, err := client.EditIssue(cfg.Owner, cfg.Repo, issue.Number, req)
 			if err != nil {
 				fmt.Fprintf(cmd.ErrOrStderr(), "Failed to fix #%d: %v\n", issue.Number, err)

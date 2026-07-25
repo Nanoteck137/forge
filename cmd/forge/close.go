@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/nanoteck137/forge"
+	"github.com/nanoteck137/forge/forgejo"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +26,9 @@ var closeCmd = &cobra.Command{
 			return fmt.Errorf("--repo is required")
 		}
 
-		client := forge.NewClient(cfg.Server, cfg.Token)
+		client := forgejo.NewClient(cfg.Server, cfg.Token)
 
-		req := forge.EditIssueRequest{State: "closed"}
+		req := forgejo.EditIssueRequest{State: "closed"}
 		issue, err := client.EditIssue(cfg.Owner, cfg.Repo, number, req)
 		if err != nil {
 			return fmt.Errorf("closing issue: %w", err)

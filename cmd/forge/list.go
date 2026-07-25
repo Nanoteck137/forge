@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nanoteck137/forge"
+	"github.com/nanoteck137/forge/forgejo"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +29,7 @@ var listCmd = &cobra.Command{
 			return fmt.Errorf("--repo is required")
 		}
 
-		client := forge.NewClient(cfg.Server, cfg.Token)
+		client := forgejo.NewClient(cfg.Server, cfg.Token)
 
 		var labelIDs []int64
 		if len(listLabels) > 0 {
@@ -45,7 +45,7 @@ var listCmd = &cobra.Command{
 			return fmt.Errorf("resolving milestone: %w", err)
 		}
 
-		opts := forge.ListIssuesOptions{
+		opts := forgejo.ListIssuesOptions{
 			State:     listState,
 			Labels:    labelIDs,
 			Assignee:  listAssignee,
@@ -65,7 +65,7 @@ var listCmd = &cobra.Command{
 				exclude[name] = true
 			}
 
-			filtered := make([]forge.Issue, 0, len(issuesList))
+			filtered := make([]forgejo.Issue, 0, len(issuesList))
 			for _, issue := range issuesList {
 				keep := true
 				for _, l := range issue.Labels {

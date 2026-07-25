@@ -3,12 +3,11 @@ package service
 import (
 	"fmt"
 
-	"github.com/nanoteck137/forge/credentials"
 	"github.com/nanoteck137/forge/forgejo"
 	"github.com/nanoteck137/forge/github"
 )
 
-type SetupMirrorInput struct {
+type SetupMirrorParams struct {
 	Server      string
 	Token       string
 	Owner       string
@@ -24,28 +23,24 @@ type SetupMirrorResult struct {
 	GitHubURL   string
 }
 
-func SetupMirror(input SetupMirrorInput) (*SetupMirrorResult, error) {
-	if input.Token == "" {
-		return nil, fmt.Errorf("not authenticated, run 'forge auth login' first")
+func SetupMirror(params SetupMirrorParams) (*SetupMirrorResult, error) {
+	if params.Token == "" {
+		return nil, fmt.Errorf("not authenticated, run 'forge init' to set up your config")
 	}
 
-	if input.GitHubToken == "" {
-		var err error
-		input.GitHubToken, err = credentials.Read("github_token")
-		if err != nil || input.GitHubToken == "" {
-			return nil, fmt.Errorf("GitHub token not set, run 'forge auth login github' first")
-		}
+	if params.GitHubToken == "" {
+		return nil, fmt.Errorf("GitHub token not set, run 'forge init' to set up your config")
 	}
 
-	forgeClient := forgejo.NewClient(input.Server, input.Token)
-	githubClient := github.NewGitHubClient(input.GitHubToken)
+	forgeClient := forgejo.NewClient(params.Server, params.Token)
+	githubClient := github.NewGitHubClient(params.GitHubToken)
 
-	_, err := forgeClient.GetRepository(input.Owner, input.Repo)
+	_, err := forgeClient.GetRepository(params.Owner, params.Repo)
 	if err != nil {
 		return nil, fmt.Errorf("getting Forgejo repo: %w", err)
 	}
 
-	githubOwner := input.GitHubOrg
+	githubOwner := params.GitHubOrg
 	if githubOwner == "" {
 		ghUser, err := githubClient.GetCurrentUser()
 		if err != nil {
@@ -54,10 +49,10 @@ func SetupMirror(input SetupMirrorInput) (*SetupMirrorResult, error) {
 		githubOwner = ghUser.Login
 	}
 
-	githubRepo, err := githubClient.GetRepo(githubOwner, input.GitHubRepo)
+	githubRepo, err := githubClient.GetRepo(githubOwner, params.GitHubRepo)
 	if err != nil {
 		createReq := github.CreateGitHubRepoRequest{
-			Name:    input.GitHubRepo,
+			Name:    params.GitHubRepo,
 			Private: true,
 		}
 
@@ -67,7 +62,7 @@ func SetupMirror(input SetupMirrorInput) (*SetupMirrorResult, error) {
 		}
 	}
 
-	mirror, err := forgeClient.AddPushMirror(input.Owner, input.Repo, forgejo.CreatePushMirrorRequest{
+	mirror, err := forgeClient.AddPushMirror(params.Owner, params.Repo, forgejo.CreatePushMirrorRequest{
 		RemoteAddress: githubRepo.SSHURL,
 		SyncOnCommit:  true,
 		Interval:      "1h0m0s",
@@ -77,7 +72,7 @@ func SetupMirror(input SetupMirrorInput) (*SetupMirrorResult, error) {
 		return nil, fmt.Errorf("creating push mirror: %w", err)
 	}
 
-	mirrorDetails, err := forgeClient.GetPushMirror(input.Owner, input.Repo, mirror.RemoteName)
+	mirrorDetails, err := forgeClient.GetPushMirror(params.Owner, params.Repo, mirror.RemoteName)
 	if err != nil {
 		return nil, fmt.Errorf("getting mirror details: %w", err)
 	}
@@ -86,8 +81,8 @@ func SetupMirror(input SetupMirrorInput) (*SetupMirrorResult, error) {
 		return nil, fmt.Errorf("no public key returned from Forgejo, please check Forgejo version")
 	}
 
-	_, err = githubClient.AddDeployKey(githubOwner, input.GitHubRepo, github.CreateDeployKeyRequest{
-		Title:    fmt.Sprintf("forge-mirror-%s/%s", input.Owner, input.Repo),
+	_, err = githubClient.AddDeployKey(githubOwner, params.GitHubRepo, github.CreateDeployKeyRequest{
+		Title:    fmt.Sprintf("forge-mirror-%s/%s", params.Owner, params.Repo),
 		Key:      mirrorDetails.PublicKey,
 		ReadOnly: false,
 	})
@@ -96,8 +91,8 @@ func SetupMirror(input SetupMirrorInput) (*SetupMirrorResult, error) {
 	}
 
 	return &SetupMirrorResult{
-		ForgejoRepo: fmt.Sprintf("%s/%s", input.Owner, input.Repo),
-		GitHubRepo:  fmt.Sprintf("%s/%s", githubOwner, input.GitHubRepo),
+		ForgejoRepo: fmt.Sprintf("%s/%s", params.Owner, params.Repo),
+		GitHubRepo:  fmt.Sprintf("%s/%s", githubOwner, params.GitHubRepo),
 		GitHubURL:   githubRepo.HTMLURL,
 	}, nil
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/nanoteck137/forge/config"
-	"github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -44,26 +43,20 @@ var initCmd = &cobra.Command{
 		scanner := bufio.NewScanner(os.Stdin)
 
 		server := prompt(scanner, "Server", "https://forgejo.nanoteck137.net")
+		token := prompt(scanner, "Token", "")
+		githubToken := prompt(scanner, "GitHub Token (optional, for mirroring)", "")
 
-		type configFile struct {
-			Server string `toml:"server"`
+		cfg := config.Config{
+			Server:      server,
+			Token:       token,
+			GitHubToken: githubToken,
 		}
 
-		cfg := configFile{
-			Server: server,
-		}
-
-		data, err := toml.Marshal(cfg)
-		if err != nil {
-			return fmt.Errorf("marshaling config: %w", err)
-		}
-
-		if err := os.WriteFile(configPath, data, 0600); err != nil {
-			return fmt.Errorf("writing config: %w", err)
+		if err := config.Save(configPath, &cfg); err != nil {
+			return fmt.Errorf("saving config: %w", err)
 		}
 
 		fmt.Printf("Config written to %s\n", configPath)
-		fmt.Println("Run 'forge auth login' to authenticate.")
 		return nil
 	},
 }

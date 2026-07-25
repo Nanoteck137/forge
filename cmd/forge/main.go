@@ -6,7 +6,6 @@ import (
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/forge"
 	"github.com/nanoteck137/forge/config"
-	"github.com/nanoteck137/forge/credentials"
 	"github.com/spf13/cobra"
 )
 
@@ -22,12 +21,13 @@ var (
 )
 
 type ResolvedConfig struct {
-	Server  string
-	Owner   string
-	Token   string
-	Repo    string
-	JSON    bool
-	Verbose bool
+	Server      string
+	Owner       string
+	Token       string
+	GitHubToken string
+	Repo        string
+	JSON        bool
+	Verbose     bool
 }
 
 var rootCmd = &cobra.Command{
@@ -88,8 +88,8 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 
 	token := tokenFlag
 	if !cmd.Flags().Changed("token") {
-		if storedToken, _ := credentials.Read("forgejo_token"); storedToken != "" {
-			token = storedToken
+		if cfg.Token != "" {
+			token = cfg.Token
 		}
 	}
 
@@ -102,11 +102,12 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 	}
 
 	return ResolvedConfig{
-		Server:  server,
-		Owner:   owner,
-		Token:   token,
-		Repo:    repo,
-		JSON:    jsonFlag,
-		Verbose: verboseFlag,
+		Server:      server,
+		Owner:       owner,
+		Token:       token,
+		GitHubToken: cfg.GitHubToken,
+		Repo:        repo,
+		JSON:        jsonFlag,
+		Verbose:     verboseFlag,
 	}
 }

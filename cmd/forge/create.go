@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/nanoteck137/forge/forgejo"
+	"github.com/nanoteck137/forge/service"
 	"github.com/spf13/cobra"
 )
 
@@ -43,32 +43,17 @@ var createCmd = &cobra.Command{
 			return fmt.Errorf("--title is required (or provide a title via --editor)")
 		}
 
-		client := forgejo.NewClient(cfg.Server, cfg.Token)
-
-		labelIDs, err := client.ResolveLabels(cfg.Owner, cfg.Repo, labelFlags)
-		if err != nil {
-			return fmt.Errorf("resolving labels: %w", err)
-		}
-
-		milestoneID, err := client.ResolveMilestone(cfg.Owner, cfg.Repo, milestoneFlag)
-		if err != nil {
-			return fmt.Errorf("resolving milestone: %w", err)
-		}
-
-		if body != "" {
-			body += "\n\n---\n"
-		}
-		body += "_Created by forge_"
-
-		req := forgejo.CreateIssueRequest{
+		issue, err := service.CreateIssue(service.CreateIssueInput{
+			Server:    cfg.Server,
+			Token:     cfg.Token,
+			Owner:     cfg.Owner,
+			Repo:      cfg.Repo,
 			Title:     title,
 			Body:      body,
+			Labels:    labelFlags,
+			Milestone: milestoneFlag,
 			Assignees: assigneeFlags,
-			Milestone: milestoneID,
-			Labels:    labelIDs,
-		}
-
-		issue, err := client.CreateIssue(cfg.Owner, cfg.Repo, req)
+		})
 		if err != nil {
 			return fmt.Errorf("creating issue: %w", err)
 		}

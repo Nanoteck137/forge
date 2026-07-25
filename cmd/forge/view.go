@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/nanoteck137/forge/forgejo"
+	"github.com/nanoteck137/forge/service"
 	"github.com/spf13/cobra"
 )
 
@@ -27,9 +27,13 @@ var viewCmd = &cobra.Command{
 			return fmt.Errorf("--repo is required")
 		}
 
-		client := forgejo.NewClient(cfg.Server, cfg.Token)
-
-		issue, err := client.GetIssue(cfg.Owner, cfg.Repo, number)
+		issue, err := service.GetIssue(service.GetIssueInput{
+			Server: cfg.Server,
+			Token:  cfg.Token,
+			Owner:  cfg.Owner,
+			Repo:   cfg.Repo,
+			Number: number,
+		})
 		if err != nil {
 			return fmt.Errorf("fetching issue: %w", err)
 		}

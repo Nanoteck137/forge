@@ -5,18 +5,18 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/nanoteck137/forge/forgejo"
+	"github.com/nanoteck137/forge/service"
 	"github.com/spf13/cobra"
 )
 
 var (
-	listState       string
-	listLabels      []string
+	listState        string
+	listLabels       []string
 	listExcludeLabels []string
-	listAssignee    string
-	listMilestone   string
-	listLimit       int
-	listPage        int
+	listAssignee     string
+	listMilestone    string
+	listLimit        int
+	listPage         int
 )
 
 var listCmd = &cobra.Command{
@@ -29,57 +29,24 @@ var listCmd = &cobra.Command{
 			return fmt.Errorf("--repo is required")
 		}
 
-		client := forgejo.NewClient(cfg.Server, cfg.Token)
-
-		var labelIDs []int64
-		if len(listLabels) > 0 {
-			var err error
-			labelIDs, err = client.ResolveLabels(cfg.Owner, cfg.Repo, listLabels)
-			if err != nil {
-				return fmt.Errorf("resolving labels: %w", err)
-			}
-		}
-
-		milestoneID, err := client.ResolveMilestone(cfg.Owner, cfg.Repo, listMilestone)
+		result, err := service.ListIssues(service.ListIssuesInput{
+			Server:        cfg.Server,
+			Token:         cfg.Token,
+			Owner:         cfg.Owner,
+			Repo:          cfg.Repo,
+			State:         listState,
+			Labels:        listLabels,
+			ExcludeLabels: listExcludeLabels,
+			Assignee:      listAssignee,
+			Milestone:     listMilestone,
+			Limit:         listLimit,
+			Page:          listPage,
+		})
 		if err != nil {
-			return fmt.Errorf("resolving milestone: %w", err)
+			return err
 		}
 
-		opts := forgejo.ListIssuesOptions{
-			State:     listState,
-			Labels:    labelIDs,
-			Assignee:  listAssignee,
-			Milestone: milestoneID,
-			Limit:     listLimit,
-			Page:      listPage,
-		}
-
-		issuesList, err := client.ListIssues(cfg.Owner, cfg.Repo, opts)
-		if err != nil {
-			return fmt.Errorf("listing issues: %w", err)
-		}
-
-		if len(listExcludeLabels) > 0 {
-			exclude := make(map[string]bool, len(listExcludeLabels))
-			for _, name := range listExcludeLabels {
-				exclude[name] = true
-			}
-
-			filtered := make([]forgejo.Issue, 0, len(issuesList))
-			for _, issue := range issuesList {
-				keep := true
-				for _, l := range issue.Labels {
-					if exclude[l.Name] {
-						keep = false
-						break
-					}
-				}
-				if keep {
-					filtered = append(filtered, issue)
-				}
-			}
-			issuesList = filtered
-		}
+		issuesList := result.Issues
 
 		if cfg.JSON {
 			type issueOut struct {

@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/nanoteck137/forge/forgejo"
+	"github.com/nanoteck137/forge/service"
 	"github.com/spf13/cobra"
 )
 
@@ -26,10 +26,14 @@ var reopenCmd = &cobra.Command{
 			return fmt.Errorf("--repo is required")
 		}
 
-		client := forgejo.NewClient(cfg.Server, cfg.Token)
-
-		req := forgejo.EditIssueRequest{State: "open"}
-		issue, err := client.EditIssue(cfg.Owner, cfg.Repo, number, req)
+		issue, err := service.EditIssue(service.EditIssueInput{
+			Server: cfg.Server,
+			Token:  cfg.Token,
+			Owner:  cfg.Owner,
+			Repo:   cfg.Repo,
+			Number: number,
+			State:  "open",
+		})
 		if err != nil {
 			return fmt.Errorf("reopening issue: %w", err)
 		}

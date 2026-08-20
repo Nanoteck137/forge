@@ -83,7 +83,7 @@ func GetCloneURL(input CloneRepoInput) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	return repository.CloneURL, repository.FullName, nil
+	return repository.SSHURL, repository.FullName, nil
 }
 
 type ForkRepoInput struct {

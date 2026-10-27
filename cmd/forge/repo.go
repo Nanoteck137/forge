@@ -171,12 +171,12 @@ var repoCreateCmd = &cobra.Command{
 
 		fmt.Printf("Created %s (%s)\n", repo.FullName, repo.HTMLURL)
 
+		scanner := bufio.NewScanner(os.Stdin)
+
 		if mirror {
 			if cfg.GitHubToken == "" {
 				return fmt.Errorf("GitHub token not set, run 'forge init' to set up your config")
 			}
-
-			scanner := bufio.NewScanner(os.Stdin)
 
 			githubRepoName := prompt(scanner, "GitHub repository name", repo.Name)
 
@@ -204,8 +204,44 @@ var repoCreateCmd = &cobra.Command{
 			fmt.Printf("  GitHub:  %s\n", mirrorResult.GitHubURL)
 		}
 
+		fmt.Print("Clone repository? [y/N]: ")
+		scanner.Scan()
+		answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
+		if answer == "y" || answer == "yes" {
+			dir := prompt(scanner, "Clone directory", repo.Name)
+
+			cloneURL := repo.SSHURL
+			if cloneURL == "" {
+				cloneURL = repo.CloneURL
+			}
+
+			if err := cloneRepository(cloneURL, repo.FullName, dir); err != nil {
+				return err
+			}
+		}
+
 		return nil
 	},
+}
+
+func cloneRepository(cloneURL, fullName, dir string) error {
+	gitArgs := []string{"clone", cloneURL}
+	if dir != "" {
+		gitArgs = append(gitArgs, dir)
+	}
+
+	fmt.Printf("Cloning %s...\n", fullName)
+
+	gitCmd := exec.Command("git", gitArgs...)
+	gitCmd.Stdout = os.Stdout
+	gitCmd.Stderr = os.Stderr
+
+	if err := gitCmd.Run(); err != nil {
+		return fmt.Errorf("cloning repo: %w", err)
+	}
+
+	fmt.Println("Done.")
+	return nil
 }
 
 var repoCloneCmd = &cobra.Command{
@@ -241,23 +277,7 @@ var repoCloneCmd = &cobra.Command{
 			dir = args[1]
 		}
 
-		gitArgs := []string{"clone", cloneURL}
-		if dir != "" {
-			gitArgs = append(gitArgs, dir)
-		}
-
-		fmt.Printf("Cloning %s...\n", fullName)
-
-		gitCmd := exec.Command("git", gitArgs...)
-		gitCmd.Stdout = os.Stdout
-		gitCmd.Stderr = os.Stderr
-
-		if err := gitCmd.Run(); err != nil {
-			return fmt.Errorf("cloning repo: %w", err)
-		}
-
-		fmt.Println("Done.")
-		return nil
+		return cloneRepository(cloneURL, fullName, dir)
 	},
 }
 

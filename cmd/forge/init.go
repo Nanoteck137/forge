@@ -48,6 +48,10 @@ var initCmd = &cobra.Command{
 
 		server := prompt(scanner, "Server", "https://forgejo.nanoteck137.net")
 		cloneDirectory := prompt(scanner, "Clone directory (optional)", existingCfg.Clone.Directory)
+		license := prompt(scanner, "Default license for new repos (optional)", existingCfg.Create.License)
+		gitignore := prompt(scanner, "Default gitignore template for new repos (optional)", existingCfg.Create.Gitignore)
+		private := promptBool(scanner, "Create private repos by default", existingCfg.Create.Private)
+		autoInit := promptBool(scanner, "Initialize new repos with a README by default", existingCfg.Create.AutoInit)
 		token := promptSecret(scanner, "Token", existingCreds.Token)
 		githubToken := promptSecret(scanner, "GitHub Token (optional, for mirroring)", existingCreds.GitHubToken)
 
@@ -55,6 +59,12 @@ var initCmd = &cobra.Command{
 			Server: server,
 			Clone: config.ConfigClone{
 				Directory: cloneDirectory,
+			},
+			Create: config.ConfigCreate{
+				License:   license,
+				Gitignore: gitignore,
+				Private:   private,
+				AutoInit:  autoInit,
 			},
 		}
 
@@ -108,6 +118,22 @@ func promptSecret(scanner *bufio.Scanner, label, current string) string {
 		return current
 	}
 	return input
+}
+
+func promptBool(scanner *bufio.Scanner, label string, defaultVal bool) bool {
+	if defaultVal {
+		fmt.Printf("%s [Y/n]: ", label)
+	} else {
+		fmt.Printf("%s [y/N]: ", label)
+	}
+
+	scanner.Scan()
+	input := strings.ToLower(strings.TrimSpace(scanner.Text()))
+	if input == "" {
+		return defaultVal
+	}
+
+	return input == "y" || input == "yes"
 }
 
 func init() {

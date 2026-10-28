@@ -100,9 +100,17 @@ server = "https://forgejo.nanoteck137.net"
 
 [clone]
 directory = "~/projects"
+
+[create]
+license = "MIT"
+gitignore = "Go"
+private = false
+auto_init = true
 ```
 
 When `clone.directory` is set, `forge repo clone` puts repositories inside that directory. Leave it empty to clone into the current directory.
+
+The `[create]` section sets defaults for `forge repo create`. Any explicit command flag (for example `--license Apache-2.0`) overrides the configured value.
 
 ## Installation
 
@@ -125,7 +133,20 @@ Config only stores program configuration:
 
 ```go
 type Config struct {
-    Server string `mapstructure:"server"`
+    Server string       `mapstructure:"server"`
+    Clone  ConfigClone  `mapstructure:"clone"`
+    Create ConfigCreate `mapstructure:"create"`
+}
+
+type ConfigClone struct {
+    Directory string `mapstructure:"directory"`
+}
+
+type ConfigCreate struct {
+    License   string `mapstructure:"license"`
+    Gitignore string `mapstructure:"gitignore"`
+    Private   bool   `mapstructure:"private"`
+    AutoInit  bool   `mapstructure:"auto_init"`
 }
 ```
 
@@ -486,6 +507,7 @@ forge repo create <name>
   --auto-init               # Initialize with README
   --license <spdx-id>       # License template
   --gitignore <template>    # Gitignore template
+  # Defaults come from the [create] config section; flags override them
 
 forge repo clone [<owner>/]<repo> [<directory>]
   -d / --directory <path>   # Base directory to clone into

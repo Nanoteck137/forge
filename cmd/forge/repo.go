@@ -143,12 +143,28 @@ var repoCreateCmd = &cobra.Command{
 
 		name := args[0]
 		desc, _ := cmd.Flags().GetString("description")
-		private, _ := cmd.Flags().GetBool("private")
-		autoInit, _ := cmd.Flags().GetBool("auto-init")
-		license, _ := cmd.Flags().GetString("license")
-		gitignore, _ := cmd.Flags().GetString("gitignore")
 		org, _ := cmd.Flags().GetString("org")
 		mirror, _ := cmd.Flags().GetBool("mirror")
+
+		private := cfg.Create.Private
+		if cmd.Flags().Changed("private") {
+			private, _ = cmd.Flags().GetBool("private")
+		}
+
+		autoInit := cfg.Create.AutoInit
+		if cmd.Flags().Changed("auto-init") {
+			autoInit, _ = cmd.Flags().GetBool("auto-init")
+		}
+
+		license := cfg.Create.License
+		if cmd.Flags().Changed("license") {
+			license, _ = cmd.Flags().GetString("license")
+		}
+
+		gitignore := cfg.Create.Gitignore
+		if cmd.Flags().Changed("gitignore") {
+			gitignore, _ = cmd.Flags().GetString("gitignore")
+		}
 
 		repo, err := service.CreateRepo(service.CreateRepoInput{
 			Server:      cfg.Server,

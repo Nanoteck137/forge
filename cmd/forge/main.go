@@ -29,6 +29,7 @@ type ResolvedConfig struct {
 	GitHubToken    string
 	Repo           string
 	CloneDirectory string
+	Create         config.ConfigCreate
 	JSON           bool
 	Verbose        bool
 }
@@ -130,6 +131,7 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 		GitHubToken:    githubToken,
 		Repo:           repo,
 		CloneDirectory: cfg.Clone.Directory,
+		Create:         cfg.Create,
 		JSON:           jsonFlag,
 		Verbose:        verboseFlag,
 	}

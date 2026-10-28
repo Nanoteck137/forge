@@ -12,12 +12,20 @@ import (
 )
 
 type Config struct {
-	Server string      `mapstructure:"server" toml:"server"`
-	Clone  ConfigClone `mapstructure:"clone" toml:"clone"`
+	Server string       `mapstructure:"server" toml:"server"`
+	Clone  ConfigClone  `mapstructure:"clone" toml:"clone"`
+	Create ConfigCreate `mapstructure:"create" toml:"create"`
 }
 
 type ConfigClone struct {
 	Directory string `mapstructure:"directory" toml:"directory"`
+}
+
+type ConfigCreate struct {
+	License   string `mapstructure:"license" toml:"license"`
+	Gitignore string `mapstructure:"gitignore" toml:"gitignore"`
+	Private   bool   `mapstructure:"private" toml:"private"`
+	AutoInit  bool   `mapstructure:"auto_init" toml:"auto_init"`
 }
 
 func configDefaults() map[string]any {
@@ -25,6 +33,12 @@ func configDefaults() map[string]any {
 		"server": "https://forgejo.nanoteck137.net",
 		"clone": map[string]any{
 			"directory": "",
+		},
+		"create": map[string]any{
+			"license":   "",
+			"gitignore": "",
+			"private":   false,
+			"auto_init": false,
 		},
 	}
 }

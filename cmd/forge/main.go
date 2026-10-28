@@ -23,13 +23,14 @@ var (
 )
 
 type ResolvedConfig struct {
-	Server      string
-	Owner       string
-	Token       string
-	GitHubToken string
-	Repo        string
-	JSON        bool
-	Verbose     bool
+	Server         string
+	Owner          string
+	Token          string
+	GitHubToken    string
+	Repo           string
+	CloneDirectory string
+	JSON           bool
+	Verbose        bool
 }
 
 var rootCmd = &cobra.Command{
@@ -123,12 +124,13 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 	}
 
 	return ResolvedConfig{
-		Server:      server,
-		Owner:       owner,
-		Token:       token,
-		GitHubToken: githubToken,
-		Repo:        repo,
-		JSON:        jsonFlag,
-		Verbose:     verboseFlag,
+		Server:         server,
+		Owner:          owner,
+		Token:          token,
+		GitHubToken:    githubToken,
+		Repo:           repo,
+		CloneDirectory: cfg.Clone.Directory,
+		JSON:           jsonFlag,
+		Verbose:        verboseFlag,
 	}
 }

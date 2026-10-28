@@ -12,12 +12,20 @@ import (
 )
 
 type Config struct {
-	Server string `mapstructure:"server" toml:"server"`
+	Server string      `mapstructure:"server" toml:"server"`
+	Clone  ConfigClone `mapstructure:"clone" toml:"clone"`
+}
+
+type ConfigClone struct {
+	Directory string `mapstructure:"directory" toml:"directory"`
 }
 
 func configDefaults() map[string]any {
 	return map[string]any{
 		"server": "https://forgejo.nanoteck137.net",
+		"clone": map[string]any{
+			"directory": "",
+		},
 	}
 }
 

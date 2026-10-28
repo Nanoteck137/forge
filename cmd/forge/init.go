@@ -42,15 +42,20 @@ var initCmd = &cobra.Command{
 		}
 
 		existingCreds := loadCredentials()
+		existingCfg := loadConfig()
 
 		scanner := bufio.NewScanner(os.Stdin)
 
 		server := prompt(scanner, "Server", "https://forgejo.nanoteck137.net")
+		cloneDirectory := prompt(scanner, "Clone directory (optional)", existingCfg.Clone.Directory)
 		token := promptSecret(scanner, "Token", existingCreds.Token)
 		githubToken := promptSecret(scanner, "GitHub Token (optional, for mirroring)", existingCreds.GitHubToken)
 
 		cfg := config.Config{
 			Server: server,
+			Clone: config.ConfigClone{
+				Directory: cloneDirectory,
+			},
 		}
 
 		if err := config.Save(configPath, &cfg); err != nil {

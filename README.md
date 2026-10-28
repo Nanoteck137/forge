@@ -92,6 +92,17 @@ Tokens can also be provided with `--token` / `--github-token` or the `FORGE_TOKE
 
 Run `forge init` to generate the config and credentials interactively.
 
+Example config:
+
+```toml
+server = "https://forgejo.nanoteck137.net"
+
+[clone]
+directory = "~/projects"
+```
+
+When `clone.directory` is set, `forge repo clone` puts repositories inside that directory. Leave it empty to clone into the current directory.
+
 ## Installation
 
 ```sh
@@ -463,7 +474,10 @@ forge repo create <name>
   --gitignore <template>    # Gitignore template
 
 forge repo clone <owner>/<repo> [<directory>]
-  # Runs: git clone <clone_url>
+  -d / --directory <path>   # Base directory to clone into
+  --current-dir             # Use the current directory instead of clone.directory
+  # Runs: git clone <clone_url> [<directory>]
+  # <directory> is an explicit target path and takes precedence over the flags/config
 
 forge repo fork <owner>/<repo>
   --org <org>               # Fork to organization

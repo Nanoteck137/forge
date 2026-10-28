@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -208,7 +210,16 @@ var repoCreateCmd = &cobra.Command{
 		scanner.Scan()
 		answer := strings.ToLower(strings.TrimSpace(scanner.Text()))
 		if answer == "y" || answer == "yes" {
-			dir := prompt(scanner, "Clone directory", repo.Name)
+			defaultDir := repo.Name
+			if cfg.CloneDirectory != "" {
+				base, err := expandPath(cfg.CloneDirectory)
+				if err != nil {
+					return err
+				}
+				defaultDir = filepath.Join(base, repo.Name)
+			}
+
+			dir := prompt(scanner, "Clone directory", defaultDir)
 
 			cloneURL := repo.SSHURL
 			if cloneURL == "" {
@@ -224,13 +235,65 @@ var repoCreateCmd = &cobra.Command{
 	},
 }
 
+func expandPath(p string) (string, error) {
+	if p != "~" && !strings.HasPrefix(p, "~/") {
+		return p, nil
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("getting home directory: %w", err)
+	}
+
+	if p == "~" {
+		return homeDir, nil
+	}
+
+	return filepath.Join(homeDir, strings.TrimPrefix(p, "~/")), nil
+}
+
+func resolveCloneDir(cfg ResolvedConfig, directory string, currentDir bool) (string, error) {
+	base := directory
+	if currentDir {
+		base = "."
+	}
+	if base == "" {
+		base = cfg.CloneDirectory
+	}
+	if base == "" {
+		base = "."
+	}
+
+	base, err := expandPath(base)
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Abs(base)
+}
+
 func cloneRepository(cloneURL, fullName, dir string) error {
+	if dir != "" {
+		expanded, err := expandPath(dir)
+		if err != nil {
+			return err
+		}
+		dir = expanded
+	}
+
 	gitArgs := []string{"clone", cloneURL}
 	if dir != "" {
+		if err := os.MkdirAll(filepath.Dir(dir), 0755); err != nil {
+			return fmt.Errorf("creating clone directory: %w", err)
+		}
 		gitArgs = append(gitArgs, dir)
 	}
 
-	fmt.Printf("Cloning %s...\n", fullName)
+	if dir != "" {
+		fmt.Printf("Cloning %s into %s...\n", fullName, dir)
+	} else {
+		fmt.Printf("Cloning %s...\n", fullName)
+	}
 
 	gitCmd := exec.Command("git", gitArgs...)
 	gitCmd.Stdout = os.Stdout
@@ -272,12 +335,32 @@ var repoCloneCmd = &cobra.Command{
 			return fmt.Errorf("getting repo: %w", err)
 		}
 
-		dir := ""
-		if len(args) > 1 {
-			dir = args[1]
+		directory, _ := cmd.Flags().GetString("directory")
+		currentDir, _ := cmd.Flags().GetBool("current-dir")
+
+		if directory != "" && currentDir {
+			return fmt.Errorf("cannot use --directory together with --current-dir")
 		}
 
-		return cloneRepository(cloneURL, fullName, dir)
+		var dest string
+		if len(args) > 1 {
+			if directory != "" || currentDir {
+				return fmt.Errorf("cannot use a directory argument together with --directory or --current-dir")
+			}
+
+			dest, err = expandPath(args[1])
+			if err != nil {
+				return err
+			}
+		} else {
+			base, err := resolveCloneDir(cfg, directory, currentDir)
+			if err != nil {
+				return fmt.Errorf("resolving clone directory: %w", err)
+			}
+			dest = filepath.Join(base, path.Base(fullName))
+		}
+
+		return cloneRepository(cloneURL, fullName, dest)
 	},
 }
 
@@ -335,6 +418,9 @@ func init() {
 	repoCreateCmd.Flags().String("gitignore", "", "Gitignore template")
 	repoCreateCmd.Flags().String("org", "", "Create in organization")
 	repoCreateCmd.Flags().Bool("mirror", false, "Set up GitHub push mirror after creation")
+
+	repoCloneCmd.Flags().StringP("directory", "d", "", "Base directory to clone into (overrides clone.directory)")
+	repoCloneCmd.Flags().Bool("current-dir", false, "Use the current directory instead of clone.directory")
 
 	repoForkCmd.Flags().String("org", "", "Fork to organization")
 

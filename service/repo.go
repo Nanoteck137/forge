@@ -100,3 +100,33 @@ func ForkRepo(input ForkRepoInput) (*forgejo.Repository, error) {
 		Organization: input.Org,
 	})
 }
+
+type ListAllUserReposInput struct {
+	Server string
+	Token  string
+}
+
+func ListAllUserRepos(input ListAllUserReposInput) ([]forgejo.Repository, error) {
+	client := forgejo.NewClient(input.Server, input.Token)
+
+	const pageSize = 50
+
+	var all []forgejo.Repository
+	for page := 1; ; page++ {
+		repos, err := client.ListUserRepos(forgejo.ListUserReposOptions{
+			Page:  page,
+			Limit: pageSize,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, repos...)
+
+		if len(repos) < pageSize {
+			break
+		}
+	}
+
+	return all, nil
+}

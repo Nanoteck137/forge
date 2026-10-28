@@ -11,6 +11,7 @@ A CLI tool for interacting with Forgejo instances from the terminal.
 - [x] `forge auth logout` - Remove stored credentials
 
 ### Repositories
+- [x] `forge clone` - Interactively pick and clone one of your repositories
 - [x] `forge repo list` - List repositories for a user/org
 - [x] `forge repo view [name]` - View repository details
 - [x] `forge repo create` - Create a new repository
@@ -450,6 +451,18 @@ forge auth status
 
 forge auth logout
   --github           # Remove only GitHub credentials
+```
+
+#### `cmd/forge/clone.go` (NEW)
+
+```
+forge clone
+  # Fetches all repositories for the logged in user, then opens an
+  # interactive picker (type to filter, enter to select)
+  -d / --directory <path>   # Base directory to clone into
+  --current-dir             # Use the current directory instead of clone.directory
+  # After picking a repo, the destination is prefilled from clone.directory
+  # and can be edited before cloning
 ```
 
 #### `cmd/forge/repo.go` (NEW)

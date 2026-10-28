@@ -16,7 +16,7 @@ var authStatusCmd = &cobra.Command{
 	Use:   "status",
 	Short: "Show current authentication status",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg := loadConfig()
+		cfg := resolveConfig(cmd)
 
 		result, err := service.GetAuthStatus(cfg.Server, cfg.Token, cfg.GitHubToken)
 		if err != nil {

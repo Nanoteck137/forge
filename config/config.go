@@ -12,16 +12,12 @@ import (
 )
 
 type Config struct {
-	Server      string `mapstructure:"server" toml:"server"`
-	Token       string `mapstructure:"token" toml:"token"`
-	GitHubToken string `mapstructure:"github_token" toml:"github_token"`
+	Server string `mapstructure:"server" toml:"server"`
 }
 
 func configDefaults() map[string]any {
 	return map[string]any{
-		"server":       "https://forgejo.nanoteck137.net",
-		"token":        "",
-		"github_token": "",
+		"server": "https://forgejo.nanoteck137.net",
 	}
 }
 

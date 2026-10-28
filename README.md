@@ -80,12 +80,17 @@ A CLI tool for interacting with Forgejo instances from the terminal.
 
 ## Configuration
 
-Config is loaded from (highest to lowest priority):
-1. Command-line flags (`--server`, `--token`, etc.)
-2. Environment variables (`FORGE_SERVER`, `FORGE_TOKEN`, `GITHUB_TOKEN`)
+Program configuration is loaded from (highest to lowest priority):
+1. Command-line flags (`--server`, etc.)
+2. Environment variables (`FORGE_SERVER`)
 3. Config files: `./config.toml`, `~/.config/forge/config.toml`, `/etc/forge/config.toml`
 
-Run `forge init` to generate a config file interactively.
+Credentials are not stored in the config file. They are stored separately in:
+- `$XDG_DATA_HOME/forge/credentials.toml` (defaults to `~/.local/share/forge/credentials.toml`)
+
+Tokens can also be provided with `--token` / `--github-token` or the `FORGE_TOKEN` / `FORGE_GITHUB_TOKEN` environment variables.
+
+Run `forge init` to generate the config and credentials interactively.
 
 ## Installation
 
@@ -104,17 +109,24 @@ MIT
 
 ### 1. Config (`config/config.go`)
 
-Add `GitHubToken` field to Config struct:
+Config only stores program configuration:
 
 ```go
 type Config struct {
-    Server      string `mapstructure:"server"`
-    Token       string `mapstructure:"token"`
-    GitHubToken string `mapstructure:"github_token"`
+    Server string `mapstructure:"server"`
 }
 ```
 
-Add `FORGE_GITHUB_TOKEN` env var support.
+Credentials are stored in `credentials/credentials.go`:
+
+```go
+type Store struct {
+    Token       string `toml:"token"`
+    GitHubToken string `toml:"github_token"`
+}
+```
+
+Credentials are saved to `$XDG_DATA_HOME/forge/credentials.toml` (or `~/.local/share/forge/credentials.toml`).
 
 ### 2. Forgejo Client (`client.go`)
 

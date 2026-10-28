@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/nanoteck137/forge/config"
+	"github.com/nanoteck137/forge/credentials"
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +16,7 @@ var initOutput string
 
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initialize a config file",
+	Short: "Initialize configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		configPath := initOutput
 		if configPath == "" {
@@ -40,23 +41,38 @@ var initCmd = &cobra.Command{
 			return fmt.Errorf("creating config directory: %w", err)
 		}
 
+		existingCreds := loadCredentials()
+
 		scanner := bufio.NewScanner(os.Stdin)
 
 		server := prompt(scanner, "Server", "https://forgejo.nanoteck137.net")
-		token := prompt(scanner, "Token", "")
-		githubToken := prompt(scanner, "GitHub Token (optional, for mirroring)", "")
+		token := promptSecret(scanner, "Token", existingCreds.Token)
+		githubToken := promptSecret(scanner, "GitHub Token (optional, for mirroring)", existingCreds.GitHubToken)
 
 		cfg := config.Config{
-			Server:      server,
-			Token:       token,
-			GitHubToken: githubToken,
+			Server: server,
 		}
 
 		if err := config.Save(configPath, &cfg); err != nil {
 			return fmt.Errorf("saving config: %w", err)
 		}
 
+		creds := credentials.Store{
+			Token:       token,
+			GitHubToken: githubToken,
+		}
+
+		if err := credentials.Save(&creds); err != nil {
+			return fmt.Errorf("saving credentials: %w", err)
+		}
+
+		credentialsPath, err := credentials.Path()
+		if err != nil {
+			return fmt.Errorf("getting credentials path: %w", err)
+		}
+
 		fmt.Printf("Config written to %s\n", configPath)
+		fmt.Printf("Credentials written to %s\n", credentialsPath)
 		return nil
 	},
 }
@@ -71,6 +87,20 @@ func prompt(scanner *bufio.Scanner, label, defaultVal string) string {
 	input := strings.TrimSpace(scanner.Text())
 	if input == "" {
 		return defaultVal
+	}
+	return input
+}
+
+func promptSecret(scanner *bufio.Scanner, label, current string) string {
+	if current != "" {
+		fmt.Printf("%s [leave blank to keep existing]: ", label)
+	} else {
+		fmt.Printf("%s: ", label)
+	}
+	scanner.Scan()
+	input := strings.TrimSpace(scanner.Text())
+	if input == "" {
+		return current
 	}
 	return input
 }

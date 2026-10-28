@@ -6,16 +6,18 @@ import (
 	"github.com/kr/pretty"
 	"github.com/nanoteck137/forge"
 	"github.com/nanoteck137/forge/config"
+	"github.com/nanoteck137/forge/credentials"
 	"github.com/spf13/cobra"
 )
 
 var (
-	serverFlag  string
-	ownerFlag   string
-	tokenFlag   string
-	jsonFlag    bool
-	verboseFlag bool
-	configFlag  string
+	serverFlag      string
+	ownerFlag       string
+	tokenFlag       string
+	githubTokenFlag string
+	jsonFlag        bool
+	verboseFlag     bool
+	configFlag      string
 
 	gitInfo = forge.DetectFromGit()
 )
@@ -44,7 +46,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&configFlag, "config", "", "Config file path")
 	rootCmd.PersistentFlags().StringVar(&serverFlag, "server", "", "Forgejo server URL")
 	rootCmd.PersistentFlags().StringVar(&ownerFlag, "owner", "", "Repository owner")
-	rootCmd.PersistentFlags().StringVar(&tokenFlag, "token", "", "Authentication token")
+	rootCmd.PersistentFlags().StringVar(&tokenFlag, "token", "", "Forgejo authentication token")
+	rootCmd.PersistentFlags().StringVar(&githubTokenFlag, "github-token", "", "GitHub authentication token")
 	rootCmd.PersistentFlags().BoolVar(&jsonFlag, "json", false, "Output in JSON format")
 	rootCmd.PersistentFlags().BoolVarP(&verboseFlag, "verbose", "v", false, "Verbose output")
 }
@@ -67,8 +70,17 @@ func loadConfig() *config.Config {
 	return cfg
 }
 
+func loadCredentials() *credentials.Store {
+	store, err := credentials.Load()
+	if err != nil {
+		return &credentials.Store{}
+	}
+	return store
+}
+
 func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 	cfg := loadConfig()
+	creds := loadCredentials()
 
 	server := serverFlag
 	if !cmd.Flags().Changed("server") {
@@ -86,11 +98,20 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 		owner = gitInfo.Owner
 	}
 
-	token := tokenFlag
-	if !cmd.Flags().Changed("token") {
-		if cfg.Token != "" {
-			token = cfg.Token
-		}
+	token := creds.Token
+	if envToken := os.Getenv("FORGE_TOKEN"); envToken != "" {
+		token = envToken
+	}
+	if cmd.Flags().Changed("token") {
+		token = tokenFlag
+	}
+
+	githubToken := creds.GitHubToken
+	if envToken := os.Getenv("FORGE_GITHUB_TOKEN"); envToken != "" {
+		githubToken = envToken
+	}
+	if cmd.Flags().Changed("github-token") {
+		githubToken = githubTokenFlag
 	}
 
 	repo := ""
@@ -105,7 +126,7 @@ func resolveConfig(cmd *cobra.Command) ResolvedConfig {
 		Server:      server,
 		Owner:       owner,
 		Token:       token,
-		GitHubToken: cfg.GitHubToken,
+		GitHubToken: githubToken,
 		Repo:        repo,
 		JSON:        jsonFlag,
 		Verbose:     verboseFlag,

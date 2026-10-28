@@ -70,7 +70,7 @@ var repoListCmd = &cobra.Command{
 }
 
 var repoViewCmd = &cobra.Command{
-	Use:   "view [<owner>/<repo>]",
+	Use:   "view [[<owner>/]<repo>]",
 	Short: "View repository details",
 	Args:  cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -83,19 +83,18 @@ var repoViewCmd = &cobra.Command{
 		var owner, repo string
 
 		if len(args) > 0 {
-			parts := strings.SplitN(args[0], "/", 2)
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid repository format, expected owner/repo")
+			var err error
+			owner, repo, err = splitRepoArg(cfg, args[0])
+			if err != nil {
+				return err
 			}
-			owner = parts[0]
-			repo = parts[1]
 		} else {
 			owner = cfg.Owner
 			repo = cfg.Repo
 		}
 
 		if owner == "" || repo == "" {
-			return fmt.Errorf("repository required: provide owner/repo argument or run inside a git repository")
+			return fmt.Errorf("repository required: provide a repository argument or run inside a git repository")
 		}
 
 		repository, err := service.GetRepo(service.GetRepoInput{
@@ -272,6 +271,22 @@ func resolveCloneDir(cfg ResolvedConfig, directory string, currentDir bool) (str
 	return filepath.Abs(base)
 }
 
+func splitRepoArg(cfg ResolvedConfig, arg string) (string, string, error) {
+	if parts := strings.SplitN(arg, "/", 2); len(parts) == 2 {
+		return parts[0], parts[1], nil
+	}
+
+	user, err := service.GetCurrentUser(service.GetCurrentUserInput{
+		Server: cfg.Server,
+		Token:  cfg.Token,
+	})
+	if err != nil {
+		return "", "", fmt.Errorf("getting current user: %w", err)
+	}
+
+	return user.Login, arg, nil
+}
+
 func cloneRepository(cloneURL, fullName, dir string) error {
 	if dir != "" {
 		expanded, err := expandPath(dir)
@@ -308,7 +323,7 @@ func cloneRepository(cloneURL, fullName, dir string) error {
 }
 
 var repoCloneCmd = &cobra.Command{
-	Use:   "clone <owner>/<repo> [<directory>]",
+	Use:   "clone [<owner>/]<repo> [<directory>]",
 	Short: "Clone a repository",
 	Args:  cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -318,12 +333,12 @@ var repoCloneCmd = &cobra.Command{
 			return err
 		}
 
-		parts := strings.SplitN(args[0], "/", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid repository format, expected owner/repo")
+		var owner, repo string
+		var err error
+		owner, repo, err = splitRepoArg(cfg, args[0])
+		if err != nil {
+			return err
 		}
-		owner := parts[0]
-		repo := parts[1]
 
 		cloneURL, fullName, err := service.GetCloneURL(service.CloneRepoInput{
 			Server: cfg.Server,
@@ -365,7 +380,7 @@ var repoCloneCmd = &cobra.Command{
 }
 
 var repoForkCmd = &cobra.Command{
-	Use:   "fork <owner>/<repo>",
+	Use:   "fork [<owner>/]<repo>",
 	Short: "Fork a repository",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -375,12 +390,10 @@ var repoForkCmd = &cobra.Command{
 			return err
 		}
 
-		parts := strings.SplitN(args[0], "/", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid repository format, expected owner/repo")
+		owner, repo, err := splitRepoArg(cfg, args[0])
+		if err != nil {
+			return err
 		}
-		owner := parts[0]
-		repo := parts[1]
 
 		org, _ := cmd.Flags().GetString("org")
 

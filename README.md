@@ -462,8 +462,9 @@ forge repo list
   --page <n>                # Page number
   --json                    # JSON output
 
-forge repo view [<owner>/<repo>]
+forge repo view [[<owner>/]<repo>]
   # Auto-detects from git remote if not specified
+  # Without <owner>, the repository is looked up under the logged in user
   --json                    # JSON output
 
 forge repo create <name>
@@ -473,13 +474,14 @@ forge repo create <name>
   --license <spdx-id>       # License template
   --gitignore <template>    # Gitignore template
 
-forge repo clone <owner>/<repo> [<directory>]
+forge repo clone [<owner>/]<repo> [<directory>]
   -d / --directory <path>   # Base directory to clone into
   --current-dir             # Use the current directory instead of clone.directory
   # Runs: git clone <clone_url> [<directory>]
+  # Without <owner>, the repository is looked up under the logged in user
   # <directory> is an explicit target path and takes precedence over the flags/config
 
-forge repo fork <owner>/<repo>
+forge repo fork [<owner>/]<repo>
   --org <org>               # Fork to organization
 ```
 
@@ -660,7 +662,7 @@ forge user view <username>
 
 ```
 forge mirror setup
-  -r / --repo <repo>           # Forgejo repo (owner/repo)
+  -r / --repo <repo>           # Forgejo repo ([owner/]repo)
   --remote-url <url>           # Remote repo URL (https or ssh)
   --remote-user <user>         # Remote username (for HTTPS auth)
   --interval <duration>        # Sync interval (default: 6h)
@@ -668,13 +670,13 @@ forge mirror setup
   --sync-on-commit             # Sync on every commit (default: false)
   --use-ssh                    # Use SSH for remote (default: false)
 
-forge mirror sync <owner>/<repo>
+forge mirror sync [<owner>/]<repo>
   # Triggers immediate push mirror sync
 
 forge mirror list -r / --repo <repo>
   --json                       # List push mirrors for a repo
 
-forge mirror remove <owner>/<repo> <remote-name>
+forge mirror remove [<owner>/]<repo> <remote-name>
   -y / --yes                   # Skip confirmation
 ```
 

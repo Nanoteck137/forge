@@ -31,15 +31,15 @@ var mirrorSetupCmd = &cobra.Command{
 		repo := cfg.Repo
 
 		if owner == "" || repo == "" {
-			fmt.Print("Forgejo repository (owner/repo): ")
+			fmt.Print("Forgejo repository ([owner/]repo): ")
 			scanner.Scan()
 			input := strings.TrimSpace(scanner.Text())
-			parts := strings.SplitN(input, "/", 2)
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid format, expected owner/repo")
+
+			var err error
+			owner, repo, err = splitRepoArg(cfg, input)
+			if err != nil {
+				return err
 			}
-			owner = parts[0]
-			repo = parts[1]
 		} else {
 			fmt.Printf("Forgejo repository: %s/%s\n", owner, repo)
 		}
@@ -79,7 +79,7 @@ var mirrorSetupCmd = &cobra.Command{
 }
 
 var mirrorSyncCmd = &cobra.Command{
-	Use:   "sync <owner>/<repo>",
+	Use:   "sync [<owner>/]<repo>",
 	Short: "Manually trigger a push mirror sync",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -89,12 +89,10 @@ var mirrorSyncCmd = &cobra.Command{
 			return err
 		}
 
-		parts := strings.SplitN(args[0], "/", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid format, expected owner/repo")
+		owner, repo, err := splitRepoArg(cfg, args[0])
+		if err != nil {
+			return err
 		}
-		owner := parts[0]
-		repo := parts[1]
 
 		fmt.Printf("Syncing push mirrors for %s/%s...\n", owner, repo)
 
@@ -165,7 +163,7 @@ var mirrorListCmd = &cobra.Command{
 }
 
 var mirrorRemoveCmd = &cobra.Command{
-	Use:   "remove <owner>/<repo> <remote-name>",
+	Use:   "remove [<owner>/]<repo> <remote-name>",
 	Short: "Remove a push mirror",
 	Args:  cobra.ExactArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -175,12 +173,10 @@ var mirrorRemoveCmd = &cobra.Command{
 			return err
 		}
 
-		parts := strings.SplitN(args[0], "/", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid format, expected owner/repo")
+		owner, repo, err := splitRepoArg(cfg, args[0])
+		if err != nil {
+			return err
 		}
-		owner := parts[0]
-		repo := parts[1]
 		remoteName := args[1]
 
 		yes, _ := cmd.Flags().GetBool("yes")

@@ -112,6 +112,8 @@ When `clone.directory` is set, `forge repo clone` puts repositories inside that 
 
 The `[create]` section sets defaults for `forge repo create`. Any explicit command flag (for example `--license Apache-2.0`) overrides the configured value.
 
+`forge init` and `forge repo create` fetch the available license and gitignore templates from the Forgejo server and show them as filterable select menus. If the templates cannot be fetched, they fall back to free-text input.
+
 ## Installation
 
 ```sh
@@ -508,6 +510,7 @@ forge repo create <name>
   --license <spdx-id>       # License template
   --gitignore <template>    # Gitignore template
   # Defaults come from the [create] config section; flags override them
+  # On a terminal, license and gitignore are chosen from server templates
 
 forge repo clone [<owner>/]<repo> [<directory>]
   -d / --directory <path>   # Base directory to clone into

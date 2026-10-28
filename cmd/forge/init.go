@@ -2,11 +2,13 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/nanoteck137/forge/config"
 	"github.com/nanoteck137/forge/credentials"
 	"github.com/spf13/cobra"
@@ -28,10 +30,29 @@ var initCmd = &cobra.Command{
 		}
 
 		if _, err := os.Stat(configPath); err == nil {
-			fmt.Print("Config already exists. Overwrite? [y/N]: ")
-			var answer string
-			fmt.Scanln(&answer)
-			if strings.ToLower(answer) != "y" {
+			overwrite := false
+			if isStdinPiped() {
+				fmt.Print("Config already exists. Overwrite? [y/N]: ")
+				var answer string
+				fmt.Scanln(&answer)
+				overwrite = strings.ToLower(answer) == "y"
+			} else {
+				if err := huh.NewConfirm().
+					Title("Config already exists").
+					Description(configPath).
+					Affirmative("Overwrite").
+					Negative("Abort").
+					Value(&overwrite).
+					Run(); err != nil {
+					if errors.Is(err, huh.ErrUserAborted) {
+						fmt.Println("Aborting.")
+						return nil
+					}
+					return err
+				}
+			}
+
+			if !overwrite {
 				fmt.Println("Aborting.")
 				return nil
 			}
@@ -44,16 +65,90 @@ var initCmd = &cobra.Command{
 		existingCreds := loadCredentials()
 		existingCfg := loadConfig()
 
-		scanner := bufio.NewScanner(os.Stdin)
+		server := existingCfg.Server
+		if server == "" {
+			server = "https://forgejo.nanoteck137.net"
+		}
+		cloneDirectory := existingCfg.Clone.Directory
+		license := existingCfg.Create.License
+		gitignore := existingCfg.Create.Gitignore
+		private := existingCfg.Create.Private
+		autoInit := existingCfg.Create.AutoInit
+		token := existingCreds.Token
+		githubToken := existingCreds.GitHubToken
 
-		server := prompt(scanner, "Server", "https://forgejo.nanoteck137.net")
-		cloneDirectory := prompt(scanner, "Clone directory (optional)", existingCfg.Clone.Directory)
-		license := prompt(scanner, "Default license for new repos (optional)", existingCfg.Create.License)
-		gitignore := prompt(scanner, "Default gitignore template for new repos (optional)", existingCfg.Create.Gitignore)
-		private := promptBool(scanner, "Create private repos by default", existingCfg.Create.Private)
-		autoInit := promptBool(scanner, "Initialize new repos with a README by default", existingCfg.Create.AutoInit)
-		token := promptSecret(scanner, "Token", existingCreds.Token)
-		githubToken := promptSecret(scanner, "GitHub Token (optional, for mirroring)", existingCreds.GitHubToken)
+		if isStdinPiped() {
+			scanner := bufio.NewScanner(os.Stdin)
+
+			server = prompt(scanner, "Server", server)
+			token = promptSecret(scanner, "Token", token)
+			githubToken = promptSecret(scanner, "GitHub Token (optional, for mirroring)", githubToken)
+			cloneDirectory = prompt(scanner, "Clone directory (optional)", cloneDirectory)
+			license = prompt(scanner, "Default license for new repos (optional)", license)
+			gitignore = prompt(scanner, "Default gitignore template for new repos (optional)", gitignore)
+			private = promptBool(scanner, "Create private repos by default", private)
+			autoInit = promptBool(scanner, "Initialize new repos with a README by default", autoInit)
+		} else {
+			settingsForm := huh.NewForm(
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Forgejo server").
+						Value(&server),
+				),
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Forgejo token").
+						EchoMode(huh.EchoModePassword).
+						Value(&token),
+				),
+				huh.NewGroup(
+					huh.NewInput().
+						Title("GitHub token (optional, for mirroring)").
+						EchoMode(huh.EchoModePassword).
+						Value(&githubToken),
+				),
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Clone directory (optional)").
+						Value(&cloneDirectory),
+				),
+				huh.NewGroup(
+					huh.NewConfirm().
+						Title("Create private repos by default?").
+						Value(&private),
+				),
+				huh.NewGroup(
+					huh.NewConfirm().
+						Title("Initialize new repos with a README?").
+						Value(&autoInit),
+				),
+			)
+
+			if err := settingsForm.Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					fmt.Println("Aborting.")
+					return nil
+				}
+				return err
+			}
+
+			templatesForm := huh.NewForm(
+				huh.NewGroup(
+					licenseSelectField(server, token, "Default license", &license),
+				),
+				huh.NewGroup(
+					gitignoreSelectField(server, token, "Default gitignore template", &gitignore),
+				),
+			)
+
+			if err := templatesForm.Run(); err != nil {
+				if errors.Is(err, huh.ErrUserAborted) {
+					fmt.Println("Aborting.")
+					return nil
+				}
+				return err
+			}
+		}
 
 		cfg := config.Config{
 			Server: server,

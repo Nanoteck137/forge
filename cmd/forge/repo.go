@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/charmbracelet/huh"
 	"github.com/nanoteck137/forge/service"
 	"github.com/spf13/cobra"
 )
@@ -164,6 +166,30 @@ var repoCreateCmd = &cobra.Command{
 		gitignore := cfg.Create.Gitignore
 		if cmd.Flags().Changed("gitignore") {
 			gitignore, _ = cmd.Flags().GetString("gitignore")
+		}
+
+		if !isStdinPiped() {
+			var fields []huh.Field
+			if !cmd.Flags().Changed("license") {
+				fields = append(fields, licenseSelectField(cfg.Server, cfg.Token, "License", &license))
+			}
+			if !cmd.Flags().Changed("gitignore") {
+				fields = append(fields, gitignoreSelectField(cfg.Server, cfg.Token, "Gitignore template", &gitignore))
+			}
+
+			if len(fields) > 0 {
+				groups := make([]*huh.Group, len(fields))
+				for i, field := range fields {
+					groups[i] = huh.NewGroup(field)
+				}
+
+				if err := huh.NewForm(groups...).Run(); err != nil {
+					if errors.Is(err, huh.ErrUserAborted) {
+						return nil
+					}
+					return err
+				}
+			}
 		}
 
 		repo, err := service.CreateRepo(service.CreateRepoInput{

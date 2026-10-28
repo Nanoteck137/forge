@@ -508,6 +508,40 @@ func (c *Client) DeleteRepo(owner, repo string) error {
 	return c.do(httpReq, nil)
 }
 
+// Template methods
+
+type LicenseTemplate struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
+}
+
+func (c *Client) ListLicenseTemplates() ([]LicenseTemplate, error) {
+	httpReq, err := c.newRequest("GET", "/licenses", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var templates []LicenseTemplate
+	if err := c.do(httpReq, &templates); err != nil {
+		return nil, err
+	}
+	return templates, nil
+}
+
+func (c *Client) ListGitignoreTemplates() ([]string, error) {
+	httpReq, err := c.newRequest("GET", "/gitignore/templates", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var templates []string
+	if err := c.do(httpReq, &templates); err != nil {
+		return nil, err
+	}
+	return templates, nil
+}
+
 // Push Mirror methods
 
 type PushMirror struct {

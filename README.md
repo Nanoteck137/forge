@@ -91,7 +91,7 @@ Credentials are not stored in the config file. They are stored separately in:
 
 Tokens can also be provided with `--token` / `--github-token` or the `FORGE_TOKEN` / `FORGE_GITHUB_TOKEN` environment variables.
 
-Run `forge init` to generate the config and credentials interactively.
+Run `forge init` to generate the config and credentials interactively. If either file already exists, `forge init` asks whether to re-initialize the config and/or overwrite the credentials, so you can update just one of them.
 
 Example config:
 

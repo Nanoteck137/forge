@@ -29,21 +29,54 @@ var initCmd = &cobra.Command{
 			configPath = filepath.Join(configDir, "config.toml")
 		}
 
-		if _, err := os.Stat(configPath); err == nil {
-			overwrite := false
-			if isStdinPiped() {
-				fmt.Print("Config already exists. Overwrite? [y/N]: ")
-				var answer string
-				fmt.Scanln(&answer)
-				overwrite = strings.ToLower(answer) == "y"
+		credentialsPath, err := credentials.Path()
+		if err != nil {
+			return fmt.Errorf("getting credentials path: %w", err)
+		}
+
+		_, configErr := os.Stat(configPath)
+		configExists := configErr == nil
+
+		_, credsErr := os.Stat(credentialsPath)
+		credsExists := credsErr == nil
+
+		reinitConfig := !configExists
+		overwriteCreds := !credsExists
+
+		piped := isStdinPiped()
+		var scanner *bufio.Scanner
+		if piped {
+			scanner = bufio.NewScanner(os.Stdin)
+		}
+
+		if configExists || credsExists {
+			if piped {
+				if configExists {
+					reinitConfig = promptBool(scanner, "Config already exists, re-initialize it", false)
+				}
+				if credsExists {
+					overwriteCreds = promptBool(scanner, "Credentials already exist, overwrite them", false)
+				}
 			} else {
-				if err := huh.NewConfirm().
-					Title("Config already exists").
-					Description(configPath).
-					Affirmative("Overwrite").
-					Negative("Abort").
-					Value(&overwrite).
-					Run(); err != nil {
+				var fields []huh.Field
+				if configExists {
+					fields = append(fields, huh.NewConfirm().
+						Title("Config already exists").
+						Description(configPath+"\nRe-initialize config?").
+						Affirmative("Re-initialize").
+						Negative("Keep").
+						Value(&reinitConfig))
+				}
+				if credsExists {
+					fields = append(fields, huh.NewConfirm().
+						Title("Credentials already exist").
+						Description(credentialsPath+"\nOverwrite credentials?").
+						Affirmative("Overwrite").
+						Negative("Keep").
+						Value(&overwriteCreds))
+				}
+
+				if err := huh.NewForm(huh.NewGroup(fields...)).Run(); err != nil {
 					if errors.Is(err, huh.ErrUserAborted) {
 						fmt.Println("Aborting.")
 						return nil
@@ -51,15 +84,11 @@ var initCmd = &cobra.Command{
 					return err
 				}
 			}
-
-			if !overwrite {
-				fmt.Println("Aborting.")
-				return nil
-			}
 		}
 
-		if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-			return fmt.Errorf("creating config directory: %w", err)
+		if !reinitConfig && !overwriteCreds {
+			fmt.Println("Nothing to do.")
+			return nil
 		}
 
 		existingCreds := loadCredentials()
@@ -77,112 +106,136 @@ var initCmd = &cobra.Command{
 		token := existingCreds.Token
 		githubToken := existingCreds.GitHubToken
 
-		if isStdinPiped() {
-			scanner := bufio.NewScanner(os.Stdin)
+		if piped {
+			if reinitConfig {
+				server = prompt(scanner, "Server", server)
+				cloneDirectory = prompt(scanner, "Clone directory (optional)", cloneDirectory)
+				private = promptBool(scanner, "Create private repos by default", private)
+				autoInit = promptBool(scanner, "Initialize new repos with a README by default", autoInit)
+			}
 
-			server = prompt(scanner, "Server", server)
-			token = promptSecret(scanner, "Token", token)
-			githubToken = promptSecret(scanner, "GitHub Token (optional, for mirroring)", githubToken)
-			cloneDirectory = prompt(scanner, "Clone directory (optional)", cloneDirectory)
-			license = prompt(scanner, "Default license for new repos (optional)", license)
-			gitignore = prompt(scanner, "Default gitignore template for new repos (optional)", gitignore)
-			private = promptBool(scanner, "Create private repos by default", private)
-			autoInit = promptBool(scanner, "Initialize new repos with a README by default", autoInit)
+			if overwriteCreds {
+				token = promptSecret(scanner, "Token", token)
+				githubToken = promptSecret(scanner, "GitHub Token (optional, for mirroring)", githubToken)
+			}
+
+			if reinitConfig {
+				license = prompt(scanner, "Default license for new repos (optional)", license)
+				gitignore = prompt(scanner, "Default gitignore template for new repos (optional)", gitignore)
+			}
 		} else {
-			settingsForm := huh.NewForm(
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Forgejo server").
-						Value(&server),
-				),
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Forgejo token").
-						EchoMode(huh.EchoModePassword).
-						Value(&token),
-				),
-				huh.NewGroup(
-					huh.NewInput().
-						Title("GitHub token (optional, for mirroring)").
-						EchoMode(huh.EchoModePassword).
-						Value(&githubToken),
-				),
-				huh.NewGroup(
-					huh.NewInput().
-						Title("Clone directory (optional)").
-						Value(&cloneDirectory),
-				),
-				huh.NewGroup(
-					huh.NewConfirm().
-						Title("Create private repos by default?").
-						Value(&private),
-				),
-				huh.NewGroup(
-					huh.NewConfirm().
-						Title("Initialize new repos with a README?").
-						Value(&autoInit),
-				),
-			)
+			if reinitConfig {
+				settingsForm := huh.NewForm(
+					huh.NewGroup(
+						huh.NewInput().
+							Title("Forgejo server").
+							Value(&server),
+					),
+					huh.NewGroup(
+						huh.NewInput().
+							Title("Clone directory (optional)").
+							Value(&cloneDirectory),
+					),
+					huh.NewGroup(
+						huh.NewConfirm().
+							Title("Create private repos by default?").
+							Value(&private),
+					),
+					huh.NewGroup(
+						huh.NewConfirm().
+							Title("Initialize new repos with a README?").
+							Value(&autoInit),
+					),
+				)
 
-			if err := settingsForm.Run(); err != nil {
-				if errors.Is(err, huh.ErrUserAborted) {
-					fmt.Println("Aborting.")
-					return nil
+				if err := settingsForm.Run(); err != nil {
+					if errors.Is(err, huh.ErrUserAborted) {
+						fmt.Println("Aborting.")
+						return nil
+					}
+					return err
 				}
-				return err
 			}
 
-			templatesForm := huh.NewForm(
-				huh.NewGroup(
-					licenseSelectField(server, token, "Default license", &license),
-				),
-				huh.NewGroup(
-					gitignoreSelectField(server, token, "Default gitignore template", &gitignore),
-				),
-			)
+			if overwriteCreds {
+				credentialsForm := huh.NewForm(
+					huh.NewGroup(
+						huh.NewInput().
+							Title("Forgejo token").
+							EchoMode(huh.EchoModePassword).
+							Value(&token),
+					),
+					huh.NewGroup(
+						huh.NewInput().
+							Title("GitHub token (optional, for mirroring)").
+							EchoMode(huh.EchoModePassword).
+							Value(&githubToken),
+					),
+				)
 
-			if err := templatesForm.Run(); err != nil {
-				if errors.Is(err, huh.ErrUserAborted) {
-					fmt.Println("Aborting.")
-					return nil
+				if err := credentialsForm.Run(); err != nil {
+					if errors.Is(err, huh.ErrUserAborted) {
+						fmt.Println("Aborting.")
+						return nil
+					}
+					return err
 				}
-				return err
+			}
+
+			if reinitConfig {
+				templatesForm := huh.NewForm(
+					huh.NewGroup(
+						licenseSelectField(server, token, "Default license", &license),
+					),
+					huh.NewGroup(
+						gitignoreSelectField(server, token, "Default gitignore template", &gitignore),
+					),
+				)
+
+				if err := templatesForm.Run(); err != nil {
+					if errors.Is(err, huh.ErrUserAborted) {
+						fmt.Println("Aborting.")
+						return nil
+					}
+					return err
+				}
 			}
 		}
 
-		cfg := config.Config{
-			Server: server,
-			Clone: config.ConfigClone{
-				Directory: cloneDirectory,
-			},
-			Create: config.ConfigCreate{
-				License:   license,
-				Gitignore: gitignore,
-				Private:   private,
-				AutoInit:  autoInit,
-			},
+		if reinitConfig {
+			cfg := config.Config{
+				Server: server,
+				Clone: config.ConfigClone{
+					Directory: cloneDirectory,
+				},
+				Create: config.ConfigCreate{
+					License:   license,
+					Gitignore: gitignore,
+					Private:   private,
+					AutoInit:  autoInit,
+				},
+			}
+
+			if err := config.Save(configPath, &cfg); err != nil {
+				return fmt.Errorf("saving config: %w", err)
+			}
+
+			fmt.Printf("Config written to %s\n", configPath)
 		}
 
-		if err := config.Save(configPath, &cfg); err != nil {
-			return fmt.Errorf("saving config: %w", err)
+		if overwriteCreds {
+			creds := credentials.Store{
+				Token:       token,
+				GitHubToken: githubToken,
+			}
+
+			if err := credentials.Save(&creds); err != nil {
+				return fmt.Errorf("saving credentials: %w", err)
+			}
+
+			fmt.Printf("Credentials written to %s\n", credentialsPath)
 		}
 
-		creds := credentials.Store{
-			Token:       token,
-			GitHubToken: githubToken,
-		}
-
-		if err := credentials.Save(&creds); err != nil {
-			return fmt.Errorf("saving credentials: %w", err)
-		}
-
-		credentialsPath, err := credentials.Path()
-		if err != nil {
-			return fmt.Errorf("getting credentials path: %w", err)
-		}
-
-		fmt.Printf("Config written to %s\n", configPath)
-		fmt.Printf("Credentials written to %s\n", credentialsPath)
 		return nil
 	},
 }
